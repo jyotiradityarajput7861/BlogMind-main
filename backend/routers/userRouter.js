@@ -4,6 +4,7 @@ const Model = require('../models/usermodel.js');
 const jwt = require('jsonwebtoken');
 const verifyToken = require('./verifyToken.js');
 const verifyAdmin = require('../utils/verifyAdmin');
+const bcrypt=require('bcrypt');
 
 
 require('dotenv').config();
@@ -147,38 +148,78 @@ router.get('/getbyuser', verifyToken, (req, res) => {
         });
 });
 
-router.post('/authenticate', (req, res) => {
-    Model.findOne(req.body)
-        .then((result) => {
+// router.post('/authenticate', (req, res) => {
+//     Model.findOne(req.body)
+//         .then((result) => {
 
-            if (result) {
-                // generate token
-                const { _id, email, password, role } = result;
-                const payload = { _id, email, password, role };
+//             if (result) {
+//                 // generate token
+//                 const { _id, email, password, role } = result;
+//                 const payload = { _id, email, password, role };
 
-                jwt.sign(
-                    payload,
-                    process.env.JWT_SECRET,
-                    { expiresIn: '1 days' },
-                    (err, token) => {
-                        if (err) {
-                            console.log(err);
+//                 jwt.sign(
+//                     payload,
+//                     process.env.JWT_SECRET,
+//                     { expiresIn: '1 days' },
+//                     (err, token) => {
+//                         if (err) {
+//                             console.log(err);
 
-                            res.status(500).json({ message: 'Token Generation Failed' });
-                        } else {
-                            res.status(200).json({ token: token, email, role });
-                        }
-                    }
-                )
+//                             res.status(500).json({ message: 'Token Generation Failed' });
+//                         } else {
+//                             res.status(200).json({ token: token, email, role });
+//                         }
+//                     }
+//                 )
 
+//             } else {
+//                 res.status(401).json({ message: 'Invalid Credentials' });
+//             }
+
+//         }).catch((err) => {
+//             console.log(err);
+//             res.status(500).json(err);
+//         });
+// })
+router.post('/authenticate', async (req, res) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required' });
+    }
+
+    try {
+        const user = await Model.findOne({ email });
+
+        if (!user) {
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+
+        const payload = {
+            _id: user._id,
+            email: user.email,
+            role: user.role,
+        };
+
+        jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1d' }, (err, token) => {
+            if (err) {
+                console.log(err);
+                return res.status(500).json({ message: 'Token generation failed' });
             } else {
-                res.status(401).json({ message: 'Invalid Credentials' });
+                res.status(200).json({ token, email: user.email, role: user.role });
             }
-
-        }).catch((err) => {
-            console.log(err);
-            res.status(500).json(err);
         });
-})
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
+
 
 module.exports = router;

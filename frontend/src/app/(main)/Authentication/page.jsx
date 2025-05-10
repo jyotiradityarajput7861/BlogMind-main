@@ -1,17 +1,28 @@
-"use client"
 
-import { useState, useEffect } from "react"
-import axios from "axios"
-import { useFormik } from "formik"
-import * as Yup from "yup"
-import toast from "react-hot-toast"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import useAppContext from "@/context/AppContext"
-import { Eye, EyeOff, Facebook, Twitter, Linkedin, Mail, Lock, User, ArrowRight, Sparkles } from "lucide-react"
-import "./style.css"
+"use client";
 
-// Validation schemas
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { useFormik } from "formik";
+import * as Yup from "yup";
+import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import useAppContext from "@/context/AppContext";
+import {
+  Eye,
+  EyeOff,
+  Facebook,
+  Twitter,
+  Linkedin,
+  Mail,
+  Lock,
+  User,
+  ArrowRight,
+  Sparkles,
+} from "lucide-react";
+import "./style.css";
+
 const SignupSchema = Yup.object().shape({
   name: Yup.string().required("Name is required").min(3, "Name must be at least 3 characters"),
   email: Yup.string().required("Email is required").email("Email is invalid"),
@@ -21,29 +32,28 @@ const SignupSchema = Yup.object().shape({
     .matches(/[a-z]/, "Password must contain at least one lowercase letter")
     .matches(/[0-9]/, "Password must contain at least one number")
     .matches(/\W/, "Password must contain at least one special character"),
-})
+});
 
 const LoginSchema = Yup.object().shape({
   email: Yup.string().email("Invalid email").required("Email is required"),
   password: Yup.string()
-    .min(8, "too short - should be 8 chars minimum")
-    .matches(/[a-z]/, "password must contain at least one lowercase letter")
-    .matches(/[A-Z]/, "password must contain at least one uppercase letter")
-    .matches(/\d/, "password must contain at least one number")
+    .min(8, "Too short - should be 8 chars minimum")
+    .matches(/[a-z]/, "Password must contain at least one lowercase letter")
+    .matches(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .matches(/\d/, "Password must contain at least one number")
     .required("Password is required"),
-})
+});
 
 export default function AuthPage() {
-  const [isActive, setIsActive] = useState(false)
-  const [passwordHidden, setPasswordHidden] = useState(true)
-  const [signupPasswordHidden, setSignupPasswordHidden] = useState(true)
-  const [isLoading, setIsLoading] = useState(false)
-  const [formSuccess, setFormSuccess] = useState(null)
+  const [isActive, setIsActive] = useState(false);
+  const [passwordHidden, setPasswordHidden] = useState(true);
+  const [signupPasswordHidden, setSignupPasswordHidden] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [formSuccess, setFormSuccess] = useState(null);
 
-  const { setUserLoggedIn, setEmail, setRole } = useAppContext()
-  const router = useRouter()
+  const { setUserLoggedIn, setEmail, setRole } = useAppContext();
+  const router = useRouter();
 
-  // Signup form
   const signupForm = useFormik({
     initialValues: {
       name: "",
@@ -51,168 +61,145 @@ export default function AuthPage() {
       password: "",
     },
     onSubmit: async (values, { resetForm }) => {
-      setIsLoading(true)
+      setIsLoading(true);
       try {
-        const result = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/user/add`, values)
-        setFormSuccess("Account created successfully!")
-        toast.success("User created successfully")
+        const result = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/user/add`, values);
+        setFormSuccess("Account created successfully!");
+        toast.success("User created successfully");
         setTimeout(() => {
-          setIsActive(false)
-          setFormSuccess(null)
-        }, 2000)
-        resetForm()
+          setIsActive(false);
+          setFormSuccess(null);
+        }, 2000);
+        resetForm();
       } catch (err) {
-        console.error(err)
-        toast.error(err?.response?.data?.message || "Something went wrong")
+        console.error(err);
+        toast.error(err?.response?.data?.message || "Something went wrong");
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
     },
     validationSchema: SignupSchema,
-  })
+  });
 
-  // Login form
   const loginForm = useFormik({
     initialValues: {
       email: "",
       password: "",
     },
     onSubmit: async (values, { resetForm }) => {
-      setIsLoading(true)
+      setIsLoading(true);
       try {
-        const result = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/user/authenticate`, values)
-        setFormSuccess("Login successful!")
-        toast.success("Login Success")
-        setUserLoggedIn(true)
-        localStorage.setItem("token", result.data.token)
-        localStorage.setItem("email", result.data.email)
-
-        // Redirect based on role
+        const result = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/user/authenticate`, values{
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setFormSuccess("Login successful!");
+        toast.success("Login Success");
+        setUserLoggedIn(true);
+        localStorage.setItem("token", result.data.token);
+        localStorage.setItem("email", result.data.email);
         setTimeout(() => {
           if (result.data.role === "admin") {
-            window.location.href = "/admin"
+            window.location.href = "/admin";
           } else {
-            window.location.href = "/"
+            window.location.href = "/";
           }
-          router.refresh()
-        }, 1500)
+          router.refresh();
+        }, 1500);
       } catch (err) {
-        toast.error("Login Failed")
-        console.error(err)
+        toast.error(err?.response?.data?.message || "Login Failed");
+        console.error(err);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-      resetForm()
+      resetForm();
     },
     validationSchema: LoginSchema,
-  })
+  });
 
-  // Panel switching effect
   useEffect(() => {
-    const handleSignUp = () => setIsActive(true)
-    const handleSignIn = () => setIsActive(false)
-
-    const signUpButton = document.getElementById("signUp")
-    const signInButton = document.getElementById("signIn")
-
-    if (signUpButton) signUpButton.addEventListener("click", handleSignUp)
-    if (signInButton) signInButton.addEventListener("click", handleSignIn)
-
+    const handleSignUp = () => setIsActive(true);
+    const handleSignIn = () => setIsActive(false);
+    const signUpButton = document.getElementById("signUp");
+    const signInButton = document.getElementById("signIn");
+    if (signUpButton) signUpButton.addEventListener("click", handleSignUp);
+    if (signInButton) signInButton.addEventListener("click", handleSignIn);
     return () => {
-      if (signUpButton) signUpButton.removeEventListener("click", handleSignUp)
-      if (signInButton) signInButton.removeEventListener("click", handleSignIn)
-    }
-  }, [])
+      if (signUpButton) signUpButton.removeEventListener("click", handleSignUp);
+      if (signInButton) signInButton.removeEventListener("click", handleSignIn);
+    };
+  }, []);
 
-  // Floating particles effect
   useEffect(() => {
     const createParticle = () => {
-      const overlay = document.querySelector(".overlay")
-      if (!overlay) return
-
-      const particle = document.createElement("div")
-      particle.className = "particle"
-
-      // Random position
-      const posX = Math.random() * overlay.clientWidth
-      const posY = Math.random() * overlay.clientHeight
-
-      // Random size
-      const size = Math.random() * 10 + 5
-
-      // Styling
-      particle.style.width = `${size}px`
-      particle.style.height = `${size}px`
-      particle.style.left = `${posX}px`
-      particle.style.top = `${posY}px`
-      particle.style.position = "absolute"
-      particle.style.borderRadius = "50%"
-      particle.style.backgroundColor = "rgba(255, 255, 255, 0.3)"
-      particle.style.pointerEvents = "none"
-
-      // Animation
-      particle.style.animation = `float ${Math.random() * 5 + 3}s linear infinite`
-
-      overlay.appendChild(particle)
-
-      // Remove after animation
+      const overlay = document.querySelector(".overlay");
+      if (!overlay) return;
+      const particle = document.createElement("div");
+      particle.className = "particle";
+      const posX = Math.random() * overlay.clientWidth;
+      const posY = Math.random() * overlay.clientHeight;
+      const size = Math.random() * 10 + 5;
+      particle.style.width = `${size}px`;
+      particle.style.height = `${size}px`;
+      particle.style.left = `${posX}px`;
+      particle.style.top = `${posY}px`;
+      particle.style.position = "absolute";
+      particle.style.borderRadius = "50%";
+      particle.style.backgroundColor = "rgba(255, 255, 255, 0.3)";
+      particle.style.pointerEvents = "none";
+      particle.style.animation = `float ${Math.random() * 5 + 3}s linear infinite`;
+      overlay.appendChild(particle);
       setTimeout(() => {
-        if (particle.parentNode === overlay) {
-          overlay.removeChild(particle)
-        }
-      }, 8000)
-    }
+        if (particle.parentNode === overlay) overlay.removeChild(particle);
+      }, 8000);
+    };
 
-    // Create particles at intervals
-    const particleInterval = setInterval(createParticle, 300)
+    const particleInterval = setInterval(createParticle, 300);
 
-    // Add keyframes for float animation
-    const style = document.createElement("style")
+    const style = document.createElement("style");
     style.innerHTML = `
       @keyframes float {
         0% { transform: translateY(0) translateX(0); opacity: 0; }
         50% { opacity: 0.8; }
         100% { transform: translateY(-100px) translateX(${Math.random() > 0.5 ? "50px" : "-50px"}); opacity: 0; }
       }
-    `
-    document.head.appendChild(style)
-
+    `;
+    document.head.appendChild(style);
     return () => {
-      clearInterval(particleInterval)
-      document.head.removeChild(style)
-    }
-  }, [])
+      clearInterval(particleInterval);
+      document.head.removeChild(style);
+    };
+  }, []);
 
   return (
     <div className="mybody">
       <div className={`container ${isActive ? "right-panel-active" : ""}`} id="container">
-        {/* Sign Up Form Container */}
+         {/* Sign Up Form Container */}
         <div className="form-container sign-up-container">
-          <form onSubmit={signupForm.handleSubmit}>
-            <h1 className="mb-4 flex items-center gap-2">
-              Create Account <Sparkles className="h-5 w-5 text-yellow-500" />
-            </h1>
+           <form onSubmit={signupForm.handleSubmit}>
+                         <h1 className="mb-4 flex items-center gap-2">
+        Create Account <Sparkles className="h-5 w-5 text-yellow-500" />
+             </h1>
 
-            <div className="social-container">
-              <a href="#" className="social" aria-label="Facebook">
-                <Facebook size={16} />
-              </a>
-              <a href="#" className="social" aria-label="Twitter">
-                <Twitter size={16} />
-              </a>
-              <a href="#" className="social" aria-label="LinkedIn">
-                <Linkedin size={16} />
-              </a>
-            </div>
+             <div className="social-container">
+         <a href="#" className="social" aria-label="Facebook">
+                 <Facebook size={16} />
+               </a>
+               <a href="#" className="social" aria-label="Twitter">
+                 <Twitter size={16} />
+               </a>
+               <a href="#" className="social" aria-label="LinkedIn">
+                 <Linkedin size={16} />
+               </a>
+             </div>
+             <span>or use your email for registration</span>
 
-            <span>or use your email for registration</span>
-
-            {/* Name input */}
-            <div className="relative w-full mt-4">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <User className="h-4 w-4 text-gray-400" />
-              </div>
-              <input
+             {/* Name input */}/             <div className="relative w-full mt-4">
+               <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                 <User className="h-4 w-4 text-gray-400" />
+               </div>
+               <input
                 type="text"
                 placeholder="Name"
                 id="name"
@@ -425,5 +412,5 @@ export default function AuthPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
